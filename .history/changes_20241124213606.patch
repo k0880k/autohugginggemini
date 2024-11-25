@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Set up environment variables
+export OPENAI_API_KEY="pk-oDMsShOhgGCCxXmBtLfiCnUpMcZJnssVqpmrpQiaBJuymjfb"
+export OPENAI_API_BASE_URL="https://api.pawan.krd/v1"
+
+# Update .env file
+echo "OPENAI_API_KEY=$OPENAI_API_KEY" > .env
+echo "OPENAI_API_BASE_URL=$OPENAI_API_BASE_URL" >> .env
+
+# Update next.config.js to include environment variables
+cat << EOF > next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  env: {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_API_BASE_URL: process.env.OPENAI_API_BASE_URL,
+  },
+}
+
+module.exports = nextConfig
+EOF
+
+# Update config.ts to use the Pawan endpoint
+sed -i 's|const BASE_URL = "https://api.openai.com"|const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"|g' src/utils/config.ts
+
+# Update README.md
+cat << EOF > README.md
+<div align="center">
+
+<h1 align="center">AutoGPT-Next-Web (Pawan API Edition)</h1>
+
+One-Click to deploy well-designed AutoGPT-Next-Web web UI on Vercel, using Pawan's API.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIg0tU%2FAutoGPT-Next-Web&project-name=autogpt-next-web&repository-name=AutoGPT-Next-Web)
+
+</div>
+
+## Features
+1. Free one-click deployment with Vercel
+2. Pre-configured to use Pawan's API - no OpenAI API key required
+3. Streaming responses for faster interactions
+4. Mobile-friendly interface
+
+## Usage
+1. Click the "Deploy with Vercel" button above
+2. Follow the Vercel deployment process
+3. Once deployed, you can start using the app immediately without any additional configuration
+
+## Development
+To run this project locally:
+
+1. Clone the repository
+2. Run `npm install`
+3. Create a `.env` file with the following content:
+OPENAI_API_KEY=pk-oDMsShOhgGCCxXmBtLfiCnUpMcZJnssVqpmrpQiaBJuymjfb OPENAI_API_BASE_URL=https://api.pawan.krd/v1
+
+4. Run `npm run dev`
+
+## License
+This project is licensed under the MIT License.
+EOF
+
+# Commit and push changes
+git add .
+git commit -m "Initial commit: Add update_and_push.sh script for Pawan API configuration"
+git push origin master
