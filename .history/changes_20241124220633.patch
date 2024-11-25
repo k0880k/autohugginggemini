@@ -46,14 +46,7 @@ if [ ! -f src/utils/config.ts ]; then
     exit 1
 fi
 
-# Cross-platform sed command
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    sed -i '' 's#const BASE_URL = "https://api.openai.com"#const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"#g' src/utils/config.ts
-else
-    # Linux
-    sed -i 's|const BASE_URL = "https://api.openai.com"|const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"|g' src/utils/config.ts
-fi
+sed -i.bak 's|const BASE_URL = "https://api.openai.com"|const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"|g' src/utils/config.ts
 
 # Update README.md
 cat << EOF > README.md

@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# Colors for better visibility
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}🔐 Setting up OpenAI API Configuration...${NC}"
+
+# Prompt for API key
+read -p "Enter your Pawan API key: " API_KEY
+
+# Validate API key is not empty
+while [ -z "$API_KEY" ]; do
+    echo -e "${RED}API key cannot be empty!${NC}"
+    read -p "Enter your Pawan API key: " API_KEY
+done
+
+# Create necessary directories
+mkdir -p src/utils
+
+# Create config.ts
+cat << EOF > src/utils/config.ts
+// API Configuration
+const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"
+const DEFAULT_MODEL = "gpt-3.5-turbo"
+const TEMPERATURE = 0.7
+
+export const config = {
+  baseUrl: BASE_URL,
+  defaultModel: DEFAULT_MODEL,
+  temperature: TEMPERATURE,
+  apiKey: process.env.OPENAI_API_KEY,
+}
+
+export default config
+EOF
+
+# Create .env file
+cat << EOF > .env
+OPENAI_API_KEY=${API_KEY}
+OPENAI_API_BASE_URL=https://api.pawan.krd/v1
+EOF
+
+# Create .env.local
+cp .env .env.local
+
+# Update .gitignore
+if [ ! -f .gitignore ]; then
+    touch .gitignore
+fi
+
+# Add environment files to .gitignore if not already present
+if ! grep -q "^.env$" .gitignore 2>/dev/null; then
+    echo ".env" >> .gitignore
+    echo ".env.local" >> .gitignore
+    echo "*.env" >> .gitignore
+fi
+
+# Create a basic test file
+cat << EOF > src/utils/test-config.ts
+import { config } from './config'
+
+async function testConnection() {
+  try {
+    const response = await fetch(\`\${config.baseUrl}/models\`, {
+      headers: {
+        'Authorization': \`Bearer \${config.apiKey}\`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(\`HTTP error! status: \${response.status}\`);
+    }
+
+    const data = await response.json();
+    console.log('Connection successful! Available models:', data);
+  } catch (error) {
+    console.error('Connection failed:', error);
+  }
+}
+
+testConnection();
+EOF
+
+echo -e "${GREEN}✅ Setup completed successfully!${NC}"
+echo -e "${BLUE}📁 Created/Updated:${NC}"
+echo "  - src/utils/config.ts"
+echo "  - .env and .env.local"
+echo "  - src/utils/test-config.ts"
+echo -e "${BLUE}🔒 Security:${NC}"
+echo "  - Added environment files to .gitignore"
+echo -e "${BLUE}🚀 Next steps:${NC}"
+echo "1. Verify your API key in .env"
+echo "2. Run the test file to verify connection"
+echo "3. Start your development server"

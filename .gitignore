@@ -51,3 +51,10 @@ yarn-error.log*
 # Sentry Auth Token
 .sentryclirc
 /volumes/
+.env
+.env.local
+*.env
+*.backup
+node_modules
+.next
+.DS_Store

@@ -14,8 +14,8 @@ fi
 [ -f src/utils/config.ts ] && cp src/utils/config.ts src/utils/config.ts.backup
 [ -f README.md ] && cp README.md README.md.backup
 
-# Update next.config.js with security headers
-cat << EOF > next.config.js
+# Update next.config.js to include environment variables
+cat << 'EOF' > next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -23,6 +23,7 @@ const nextConfig = {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_API_BASE_URL: process.env.OPENAI_API_BASE_URL,
   },
+  // Add security headers
   async headers() {
     return [
       {
@@ -40,28 +41,25 @@ const nextConfig = {
 module.exports = nextConfig
 EOF
 
-# Update config.ts with error handling
+# Update config.ts with error handling for environment variables
 if [ ! -f src/utils/config.ts ]; then
     echo "Error: config.ts not found in src/utils/"
     exit 1
 fi
 
-# Cross-platform sed command
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    sed -i '' 's#const BASE_URL = "https://api.openai.com"#const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"#g' src/utils/config.ts
-else
-    # Linux
-    sed -i 's|const BASE_URL = "https://api.openai.com"|const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"|g' src/utils/config.ts
-fi
+sed -i.bak 's|const BASE_URL = "https://api.openai.com"|const BASE_URL = process.env.OPENAI_API_BASE_URL || "https://api.pawan.krd/v1"|g' src/utils/config.ts
 
-# Update README.md
-cat << EOF > README.md
-# AutoGPT-Next-Web (Pawan API Edition)
+# Update README.md with more detailed instructions
+cat << 'EOF' > README.md
+<div align="center">
+
+<h1 align="center">AutoGPT-Next-Web (Pawan API Edition)</h1>
 
 One-Click to deploy well-designed AutoGPT-Next-Web web UI on Vercel, using Pawan's API.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FIg0tU%2FAutoGPT-Next-Web&project-name=autogpt-next-web&repository-name=AutoGPT-Next-Web)
+
+</div>
 
 ## Features
 1. Free one-click deployment with Vercel
@@ -80,7 +78,7 @@ To run this project locally:
 
 1. Clone the repository
 \`\`\`bash
-git clone
+git clone <repository-url>
 cd AutoGPT-Next-Web
 \`\`\`
 
@@ -89,7 +87,7 @@ cd AutoGPT-Next-Web
 npm install
 \`\`\`
 
-3. Create a \`.env.local\` file with:
+3. Create a \`.env.local\` file with the following content:
 \`\`\`
 OPENAI_API_KEY=your_pawan_api_key
 OPENAI_API_BASE_URL=https://api.pawan.krd/v1
@@ -100,40 +98,16 @@ OPENAI_API_BASE_URL=https://api.pawan.krd/v1
 npm run dev
 \`\`\`
 
-## Security Features
-- Enhanced HTTP security headers
-- Environment variable protection
-- Automatic backup system
-- Error handling and validation
+## Troubleshooting
+- If you encounter any issues, check the console logs in your browser
+- Ensure all environment variables are properly set in Vercel
+- For local development, make sure \`.env.local\` is in the root directory
 
 ## License
 This project is licensed under the MIT License.
 EOF
 
-# Create .env file
-cat << EOF > .env
-OPENAI_API_KEY=your_pawan_api_key
-OPENAI_API_BASE_URL=https://api.pawan.krd/v1
-EOF
-
-# Create .env.local for development
-cp .env .env.local
-
-# Update .gitignore
-if [ ! -f .gitignore ]; then
-    touch .gitignore
-fi
-
-# Add necessary entries to .gitignore
-echo ".env" >> .gitignore
-echo ".env.local" >> .gitignore
-echo "*.env" >> .gitignore
-echo "*.backup" >> .gitignore
-echo "node_modules" >> .gitignore
-echo ".next" >> .gitignore
-echo ".DS_Store" >> .gitignore
-
-# Git operations with error handling
+# Commit and push changes with error handling
 if ! git add .; then
     echo "Error: Failed to stage changes"
     exit 1
@@ -149,16 +123,4 @@ if ! git push origin main; then
     exit 1
 fi
 
-# Success message with next steps
-echo "✅ Successfully updated configuration files and pushed changes!"
-echo ""
-echo "🔒 Security features implemented:"
-echo "  - Enhanced HTTP headers"
-echo "  - Environment variable protection"
-echo "  - Backup system"
-echo "  - Error handling"
-echo ""
-echo "📝 Next steps:"
-echo "1. Update your API key in .env.local"
-echo "2. Run 'npm install' if you haven't already"
-echo "3. Start your development server with 'npm run dev'"
+echo "Successfully updated configuration files and pushed changes! 🎉"
