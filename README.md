@@ -25,8 +25,10 @@ To run this project locally:
 1. Clone the repository
 2. Run 
 3. Create a  file with the following content:
-OPENAI_API_KEY=pk-oDMsShOhgGCCxXmBtLfiCnUpMcZJnssVqpmrpQiaBJuymjfb OPENAI_API_BASE_URL=https://api.pawan.krd/v1
-
+   ```
+   OPENAI_API_KEY=your_pawan_api_key
+   OPENAI_API_BASE_URL=https://api.pawan.krd/v1
+   ```
 4. Run 
 
 ## License

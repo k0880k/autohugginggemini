@@ -1,13 +1,5 @@
 #!/bin/bash
 
-# Set up environment variables
-export OPENAI_API_KEY="pk-oDMsShOhgGCCxXmBtLfiCnUpMcZJnssVqpmrpQiaBJuymjfb"
-export OPENAI_API_BASE_URL="https://api.pawan.krd/v1"
-
-# Update .env file
-echo "OPENAI_API_KEY=$OPENAI_API_KEY" > .env
-echo "OPENAI_API_BASE_URL=$OPENAI_API_BASE_URL" >> .env
-
 # Update next.config.js to include environment variables
 cat << EOF > next.config.js
 /** @type {import('next').NextConfig} */
@@ -54,8 +46,10 @@ To run this project locally:
 1. Clone the repository
 2. Run `npm install`
 3. Create a `.env` file with the following content:
-OPENAI_API_KEY=pk-oDMsShOhgGCCxXmBtLfiCnUpMcZJnssVqpmrpQiaBJuymjfb OPENAI_API_BASE_URL=https://api.pawan.krd/v1
-
+   \`\`\`
+   OPENAI_API_KEY=your_pawan_api_key
+   OPENAI_API_BASE_URL=https://api.pawan.krd/v1
+   \`\`\`
 4. Run `npm run dev`
 
 ## License
@@ -64,5 +58,5 @@ EOF
 
 # Commit and push changes
 git add .
-git commit -m "Initial commit: Add update_and_push.sh script for Pawan API configuration"
-git push origin master
+git commit -m "Update for Pawan API configuration"
+git push origin main
