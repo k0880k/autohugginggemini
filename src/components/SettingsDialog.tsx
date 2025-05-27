@@ -32,6 +32,8 @@ const PROVIDER_OPTIONS: { value: ProviderType; label: string }[] = [
   { value: "gemini", label: "Google Gemini" },
 ];
 
+const PROVIDER_OPTION_STRINGS = PROVIDER_OPTIONS.map(p => p.label);
+
 export const SettingsDialog: React.FC<{
   show: boolean;
   close: () => void;
@@ -51,6 +53,16 @@ export const SettingsDialog: React.FC<{
       return "openai";
     }
   );
+  
+  const getProviderLabel = (provider: ProviderType): string => {
+    const option = PROVIDER_OPTIONS.find(p => p.value === provider);
+    return option ? option.label : "OpenAI";
+  };
+  
+  const getProviderFromLabel = (label: string): ProviderType => {
+    const option = PROVIDER_OPTIONS.find(p => p.label === label);
+    return option ? option.value : "openai";
+  };
   const { isGuestMode } = useGuestMode(settings.customGuestKey);
   const { t } = useTranslation(["settings", "common"]);
 
@@ -145,9 +157,9 @@ export const SettingsDialog: React.FC<{
     close();
   };
 
-  const handleProviderChange = (newProviderValue: string | undefined) => {
-    if (newProviderValue) {
-      const newProvider = newProviderValue as ProviderType;
+  const handleProviderChange = (newProviderLabel: string | undefined) => {
+    if (newProviderLabel) {
+      const newProvider = getProviderFromLabel(newProviderLabel);
       setSelectedProvider(newProvider);
       // Optional: Clear model name for the new provider if switching,
       // or set to default if not already set.
@@ -296,14 +308,11 @@ export const SettingsDialog: React.FC<{
             </>
           }
           type="combobox"
-          value={selectedProvider}
+          value={getProviderLabel(selectedProvider)}
           onChange={() => null} // onChange is not used for combobox with setValue
           setValue={handleProviderChange}
           attributes={{
-            options: PROVIDER_OPTIONS.map((p) => ({
-              value: p.value,
-              label: p.label,
-            })),
+            options: PROVIDER_OPTION_STRINGS,
           }}
         />
         <Input
@@ -318,7 +327,7 @@ export const SettingsDialog: React.FC<{
           placeholder={
             selectedProvider === "openai"
               ? "sk-..."
-              : t("api-key-placeholder", "Enter API Key if required")
+              : (t("api-key-placeholder", "Enter API Key if required") as string)
           }
           value={settings.customApiKey}
           onChange={(e) => updateSettings("customApiKey", e.target.value)}

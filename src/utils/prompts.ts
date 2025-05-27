@@ -1,7 +1,6 @@
 import { OpenAI } from "langchain/llms/openai";
-import { HuggingFaceInference } from "@langchain/community/llms/hf";
-import { VertexAI } from "@langchain/google-vertexai";
 import { PromptTemplate } from "langchain/prompts";
+import type { BaseLanguageModel } from "langchain/base_language";
 import type { ModelSettings } from "./types";
 import { GPT_35_TURBO } from "./constants";
 
@@ -20,34 +19,14 @@ export const createModel = (settings: ModelSettings) => {
   const customApiKey = settings.customApiKey;
   const customEndPoint = settings.customEndPoint;
 
+  // For now, we only support OpenAI models in the browser
+  // HuggingFace and Gemini support will be added in future updates
   if (settings.huggingFaceModelName) {
-    const hfOptions: ConstructorParameters<typeof HuggingFaceInference>[0] = {
-      model: settings.huggingFaceModelName,
-      temperature,
-      maxTokens,
-    };
-    if (customApiKey) {
-      hfOptions.apiKey = customApiKey;
-    }
-    if (customEndPoint) {
-      hfOptions.endpoint = customEndPoint;
-    }
-    return new HuggingFaceInference(hfOptions);
+    console.warn('HuggingFace models are not yet supported in this environment. Falling back to OpenAI.');
   }
 
   if (settings.geminiModelName) {
-    const vertexAIOptions: ConstructorParameters<typeof VertexAI>[0] = {
-      model: settings.geminiModelName,
-      temperature,
-      maxOutputTokens: maxTokens, // VertexAI uses maxOutputTokens
-    };
-    // VertexAI uses ADC or GOOGLE_API_KEY env var by default if apiKey is not directly passed
-    // For explicit key usage, one might need to configure authOptions depending on the environment (Node vs Web)
-    // and specific auth requirements, which is beyond simple apiKey mapping here.
-    // If customApiKey is intended for VertexAI, further logic for authOptions would be needed.
-    // The existing getServerSideKey() is for OpenAI, so not directly applicable.
-    // For now, relying on environment-based auth for VertexAI.
-    return new VertexAI(vertexAIOptions);
+    console.warn('Gemini models are not yet supported in this environment. Falling back to OpenAI.');
   }
 
   // Default to OpenAI
