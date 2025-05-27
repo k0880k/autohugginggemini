@@ -17,7 +17,7 @@ async function startGoalAgent(
   customLanguage: string
 ) {
   const completion = await new LLMChain({
-    llm: createModel(modelSettings),
+    llm: createModel(modelSettings) as any,
     prompt: startGoalPrompt,
   }).call({
     goal,
@@ -34,7 +34,7 @@ async function analyzeTaskAgent(
 ) {
   const actions = ["reason", "search"];
   const completion = await new LLMChain({
-    llm: createModel(modelSettings),
+    llm: createModel(modelSettings) as any,
     prompt: analyzeTaskPrompt,
   }).call({
     goal,
@@ -77,7 +77,7 @@ async function executeTaskAgent(
   }
 
   const completion = await new LLMChain({
-    llm: createModel(modelSettings),
+    llm: createModel(modelSettings) as any,
     prompt: executeTaskPrompt,
   }).call({
     goal,
@@ -105,7 +105,7 @@ async function createTasksAgent(
   customLanguage: string,
 ) {
   const completion = await new LLMChain({
-    llm: createModel(modelSettings),
+    llm: createModel(modelSettings) as any,
     prompt: createTasksPrompt,
   }).call({
     goal,

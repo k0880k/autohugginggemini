@@ -1,5 +1,6 @@
 import { OpenAI } from "langchain/llms/openai";
 import { PromptTemplate } from "langchain/prompts";
+import type { BaseLanguageModel } from "langchain/base_language";
 import type { ModelSettings } from "./types";
 import { GPT_35_TURBO } from "./constants";
 
@@ -13,23 +14,34 @@ const getServerSideKey = (): string => {
 };
 
 export const createModel = (settings: ModelSettings) => {
-  let _settings: ModelSettings | undefined = settings;
-  if (!settings.customApiKey) {
-    _settings = undefined;
+  const temperature = settings.customTemperature ?? 0.9;
+  const maxTokens = settings.customMaxTokens ?? 400;
+  const customApiKey = settings.customApiKey;
+  const customEndPoint = settings.customEndPoint;
+
+  // For now, we only support OpenAI models in the browser
+  // HuggingFace and Gemini support will be added in future updates
+  if (settings.huggingFaceModelName) {
+    console.warn('HuggingFace models are not yet supported in this environment. Falling back to OpenAI.');
   }
 
-  const options = {
-    openAIApiKey: _settings?.customApiKey || getServerSideKey(),
-    temperature: _settings?.customTemperature || 0.9,
-    modelName: _settings?.customModelName || GPT_35_TURBO,
-    maxTokens: _settings?.customMaxTokens || 400,
+  if (settings.geminiModelName) {
+    console.warn('Gemini models are not yet supported in this environment. Falling back to OpenAI.');
+  }
+
+  // Default to OpenAI
+  const openAIOptions: ConstructorParameters<typeof OpenAI>[0] = {
+    openAIApiKey: customApiKey || getServerSideKey(),
+    temperature,
+    modelName: settings.customModelName || GPT_35_TURBO,
+    maxTokens,
   };
 
-  const baseOptions = {
-    basePath: _settings?.customEndPoint || undefined,
+  const openAIBaseOptions: ConstructorParameters<typeof OpenAI>[1] = {
+    basePath: customEndPoint || undefined,
   };
 
-  return new OpenAI(options, baseOptions);
+  return new OpenAI(openAIOptions, openAIBaseOptions);
 };
 
 export const startGoalPrompt = new PromptTemplate({
