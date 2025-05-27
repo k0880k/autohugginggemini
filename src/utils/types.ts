@@ -6,6 +6,8 @@ export type ModelSettings = {
   customEndPoint?: string;
   customMaxTokens?: number;
   customGuestKey?: string;
+  huggingFaceModelName?: string;
+  geminiModelName?: string;
 };
 
 export type GuestSettings = {

@@ -1,4 +1,6 @@
 import { OpenAI } from "langchain/llms/openai";
+import { HuggingFaceInference } from "@langchain/community/llms/hf";
+import { VertexAI } from "@langchain/google-vertexai";
 import { PromptTemplate } from "langchain/prompts";
 import type { ModelSettings } from "./types";
 import { GPT_35_TURBO } from "./constants";
@@ -13,23 +15,54 @@ const getServerSideKey = (): string => {
 };
 
 export const createModel = (settings: ModelSettings) => {
-  let _settings: ModelSettings | undefined = settings;
-  if (!settings.customApiKey) {
-    _settings = undefined;
+  const temperature = settings.customTemperature ?? 0.9;
+  const maxTokens = settings.customMaxTokens ?? 400;
+  const customApiKey = settings.customApiKey;
+  const customEndPoint = settings.customEndPoint;
+
+  if (settings.huggingFaceModelName) {
+    const hfOptions: ConstructorParameters<typeof HuggingFaceInference>[0] = {
+      model: settings.huggingFaceModelName,
+      temperature,
+      maxTokens,
+    };
+    if (customApiKey) {
+      hfOptions.apiKey = customApiKey;
+    }
+    if (customEndPoint) {
+      hfOptions.endpoint = customEndPoint;
+    }
+    return new HuggingFaceInference(hfOptions);
   }
 
-  const options = {
-    openAIApiKey: _settings?.customApiKey || getServerSideKey(),
-    temperature: _settings?.customTemperature || 0.9,
-    modelName: _settings?.customModelName || GPT_35_TURBO,
-    maxTokens: _settings?.customMaxTokens || 400,
+  if (settings.geminiModelName) {
+    const vertexAIOptions: ConstructorParameters<typeof VertexAI>[0] = {
+      model: settings.geminiModelName,
+      temperature,
+      maxOutputTokens: maxTokens, // VertexAI uses maxOutputTokens
+    };
+    // VertexAI uses ADC or GOOGLE_API_KEY env var by default if apiKey is not directly passed
+    // For explicit key usage, one might need to configure authOptions depending on the environment (Node vs Web)
+    // and specific auth requirements, which is beyond simple apiKey mapping here.
+    // If customApiKey is intended for VertexAI, further logic for authOptions would be needed.
+    // The existing getServerSideKey() is for OpenAI, so not directly applicable.
+    // For now, relying on environment-based auth for VertexAI.
+    return new VertexAI(vertexAIOptions);
+  }
+
+  // Default to OpenAI
+  const openAIOptions: ConstructorParameters<typeof OpenAI>[0] = {
+    openAIApiKey: customApiKey || getServerSideKey(),
+    temperature,
+    modelName: settings.customModelName || GPT_35_TURBO,
+    maxTokens,
   };
 
-  const baseOptions = {
-    basePath: _settings?.customEndPoint || undefined,
+  const openAIBaseOptions: ConstructorParameters<typeof OpenAI>[1] = {
+    basePath: customEndPoint || undefined,
   };
 
-  return new OpenAI(options, baseOptions);
+  return new OpenAI(openAIOptions, openAIBaseOptions);
 };
 
 export const startGoalPrompt = new PromptTemplate({
