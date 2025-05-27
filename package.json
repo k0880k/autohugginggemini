@@ -6,7 +6,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "next build --no-lint",
+    "build": "cross-env SKIP_ENV_VALIDATION=1 next build --no-lint",
+    "build:vercel": "prisma generate && cross-env SKIP_ENV_VALIDATION=1 next build --no-lint",
     "dev": "next dev",
     "postinstall": "prisma generate",
     "lint": "cross-env SKIP_ENV_VALIDATION=1 next lint",
@@ -16,7 +17,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
-    "@huggingface/inference": "^3.15.0",
+    "@huggingface/inference": "^2.8.1",
     "@langchain/community": "^0.3.44",
     "@langchain/core": "^0.3.57",
     "@langchain/google-vertexai": "^0.2.9",
