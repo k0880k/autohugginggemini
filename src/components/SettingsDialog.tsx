@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation, Trans } from "next-i18next";
 import Button from "./Button";
 import {
@@ -10,29 +10,73 @@ import {
   FaCoins,
   FaCode,
   FaServer,
+  FaBrain, // Icon for AI provider
 } from "react-icons/fa";
 import Dialog from "./Dialog";
 import Input from "./Input";
 import { GPT_MODEL_NAMES, GPT_4 } from "../utils/constants";
+import {
+  DEFAULT_HUGGING_FACE_MODEL,
+  DEFAULT_GEMINI_MODEL,
+} from "../utils/config";
 import Accordion from "./Accordion";
 import type { ModelSettings, SettingModel } from "../utils/types";
 import { useGuestMode } from "../hooks/useGuestMode";
 import clsx from "clsx";
+
+type ProviderType = "openai" | "huggingface" | "gemini";
+
+const PROVIDER_OPTIONS: { value: ProviderType; label: string }[] = [
+  { value: "openai", label: "OpenAI" },
+  { value: "huggingface", label: "Hugging Face" },
+  { value: "gemini", label: "Google Gemini" },
+];
+
+const PROVIDER_OPTION_STRINGS = PROVIDER_OPTIONS.map(p => p.label);
 
 export const SettingsDialog: React.FC<{
   show: boolean;
   close: () => void;
   customSettings: SettingModel;
 }> = ({ show, close, customSettings }) => {
-  const [settings, setSettings] = React.useState<ModelSettings>({
+  const [settings, setSettings] = useState<ModelSettings>({
     ...customSettings.settings,
   });
+  const [selectedProvider, setSelectedProvider] = useState<ProviderType>(
+    () => {
+      if (customSettings.settings.huggingFaceModelName) {
+        return "huggingface";
+      }
+      if (customSettings.settings.geminiModelName) {
+        return "gemini";
+      }
+      return "openai";
+    }
+  );
+  
+  const getProviderLabel = (provider: ProviderType): string => {
+    const option = PROVIDER_OPTIONS.find(p => p.value === provider);
+    return option ? option.label : "OpenAI";
+  };
+  
+  const getProviderFromLabel = (label: string): ProviderType => {
+    const option = PROVIDER_OPTIONS.find(p => p.label === label);
+    return option ? option.value : "openai";
+  };
   const { isGuestMode } = useGuestMode(settings.customGuestKey);
   const { t } = useTranslation(["settings", "common"]);
 
   useEffect(() => {
     setSettings(customSettings.settings);
-  }, [customSettings, close]);
+    // Re-determine provider when settings are externally updated or dialog is re-shown
+    if (customSettings.settings.huggingFaceModelName) {
+      setSelectedProvider("huggingface");
+    } else if (customSettings.settings.geminiModelName) {
+      setSelectedProvider("gemini");
+    } else {
+      setSelectedProvider("openai");
+    }
+  }, [customSettings, show]); // Added show to deps, as settings might not change if dialog is hidden then re-shown
 
   const updateSettings = <Key extends keyof ModelSettings>(
     key: Key,
@@ -57,14 +101,20 @@ export const SettingsDialog: React.FC<{
   };
 
   const handleSave = () => {
-    if (!isGuestMode && !keyIsValid(settings.customApiKey)) {
+    if (
+      selectedProvider === "openai" &&
+      !isGuestMode &&
+      !keyIsValid(settings.customApiKey)
+    ) {
       alert(
         t(
-          "Key is invalid, please ensure that you have set up billing in your OpenAI account!"
+          "OpenAI API Key is invalid, please ensure that you have set up billing in your OpenAI account!"
         )
       );
       return;
     }
+    // Add similar key validation for HuggingFace and Gemini if they have standard key patterns
+    // For now, we assume customApiKey is used for all and validated for OpenAI.
 
     if (!urlIsValid(settings.customEndPoint)) {
       alert(
@@ -74,17 +124,55 @@ export const SettingsDialog: React.FC<{
       );
       return;
     }
-    customSettings.saveSettings(settings);
+
+    const newSettings: ModelSettings = { ...settings };
+
+    if (selectedProvider === "openai") {
+      newSettings.huggingFaceModelName = undefined;
+      newSettings.geminiModelName = undefined;
+      // Ensure customModelName is set, or default if necessary (already handled by input)
+    } else if (selectedProvider === "huggingface") {
+      newSettings.customModelName = undefined;
+      newSettings.geminiModelName = undefined;
+      if (!newSettings.huggingFaceModelName) {
+        newSettings.huggingFaceModelName = DEFAULT_HUGGING_FACE_MODEL;
+      }
+    } else if (selectedProvider === "gemini") {
+      newSettings.customModelName = undefined;
+      newSettings.huggingFaceModelName = undefined;
+      if (!newSettings.geminiModelName) {
+        newSettings.geminiModelName = DEFAULT_GEMINI_MODEL;
+      }
+    }
+
+    customSettings.saveSettings(newSettings);
     close();
     return;
   };
 
   const handleReset = () => {
-    customSettings.resetSettings();
+    // Reset needs to also reset the selected provider to default.
+    customSettings.resetSettings(); // This will load default settings which should be OpenAI
+    setSelectedProvider("openai"); // Explicitly set provider state
     close();
   };
 
-  const disabled = !isGuestMode && !settings.customApiKey;
+  const handleProviderChange = (newProviderLabel: string | undefined) => {
+    if (newProviderLabel) {
+      const newProvider = getProviderFromLabel(newProviderLabel);
+      setSelectedProvider(newProvider);
+      // Optional: Clear model name for the new provider if switching,
+      // or set to default if not already set.
+      // For now, we let existing values persist until save.
+    }
+  };
+
+  const disabled =
+    !isGuestMode && !settings.customApiKey && selectedProvider === "openai"; // API key only strictly required for OpenAI if not guest
+  // For HuggingFace and Gemini, API key might be optional or handled differently (e.g. free tiers, env vars)
+  // We'll keep the generic 'disabled' logic for advanced settings for now.
+  const advancedDisabled = !isGuestMode && !settings.customApiKey;
+
   const advancedSettings = (
     <div className="flex flex-col gap-2">
       <Input
@@ -94,9 +182,13 @@ export const SettingsDialog: React.FC<{
             <span className="ml-2">{t("endPoint")}</span>
           </>
         }
-        disabled={disabled}
+        disabled={advancedDisabled}
         value={settings.customEndPoint}
         onChange={(e) => updateSettings("customEndPoint", e.target.value)}
+        toolTipProperties={{
+          message: t("endpoint-tips", "Leave blank for default OpenAI/selected provider endpoint. Provide if using a proxy or custom Hugging Face/Gemini endpoint.") as string,
+          disabled: false,
+        }}
       />
       <Input
         left={
@@ -105,7 +197,7 @@ export const SettingsDialog: React.FC<{
             <span className="ml-2">{t("temp")}</span>
           </>
         }
-        value={settings.customTemperature}
+        value={settings.customTemperature ?? 0.9}
         onChange={(e) =>
           updateSettings("customTemperature", parseFloat(e.target.value))
         }
@@ -116,7 +208,7 @@ export const SettingsDialog: React.FC<{
         }}
         attributes={{
           min: 0,
-          max: 1,
+          max: 1.0, // Max temp for some models might be higher, but 1.0 is common
           step: 0.01,
         }}
       />
@@ -127,8 +219,8 @@ export const SettingsDialog: React.FC<{
             <span className="ml-2">{t("loop")}</span>
           </>
         }
-        value={settings.customMaxLoops}
-        disabled={disabled}
+        value={settings.customMaxLoops ?? 10}
+        disabled={advancedDisabled}
         onChange={(e) =>
           updateSettings("customMaxLoops", parseFloat(e.target.value))
         }
@@ -139,7 +231,7 @@ export const SettingsDialog: React.FC<{
         }}
         attributes={{
           min: 1,
-          max: 100,
+          max: 25, // Reducing max loops from 100 to a more reasonable default
           step: 1,
         }}
       />
@@ -150,8 +242,8 @@ export const SettingsDialog: React.FC<{
             <span className="ml-2">{t("tokens")}</span>
           </>
         }
-        value={settings.customMaxTokens ?? 400}
-        disabled={disabled}
+        value={settings.customMaxTokens ?? 400} // Default to 400 if undefined
+        disabled={advancedDisabled}
         onChange={(e) =>
           updateSettings("customMaxTokens", parseFloat(e.target.value))
         }
@@ -161,9 +253,9 @@ export const SettingsDialog: React.FC<{
           disabled: false,
         }}
         attributes={{
-          min: 200,
-          max: 2000,
-          step: 100,
+          min: 50, // Lowering min for more flexibility
+          max: 8000, // Increasing max for models that support it
+          step: 50,
         }}
       />
     </div>
@@ -211,29 +303,96 @@ export const SettingsDialog: React.FC<{
         <Input
           left={
             <>
-              <FaKey />
-              <span className="ml-2">{t("key")}</span>
+              <FaBrain /> {/* Icon for AI provider */}
+              <span className="ml-2">{t("provider", "Provider")}</span>
             </>
           }
-          placeholder={"sk-..."}
-          value={settings.customApiKey}
-          onChange={(e) => updateSettings("customApiKey", e.target.value)}
-          type="password"
+          type="combobox"
+          value={getProviderLabel(selectedProvider)}
+          onChange={() => null} // onChange is not used for combobox with setValue
+          setValue={handleProviderChange}
+          attributes={{
+            options: PROVIDER_OPTION_STRINGS,
+          }}
         />
         <Input
           left={
             <>
-              <FaMicrochip />
-              <span className="ml-2">{t("model")}</span>
+              <FaKey />
+              <span className="ml-2">
+                {t("api-key-label", "API Key (for selected provider)")}
+              </span>
             </>
           }
-          type="combobox"
-          value={settings.customModelName}
-          onChange={() => null}
-          setValue={(e) => updateSettings("customModelName", e)}
-          attributes={{ options: GPT_MODEL_NAMES }}
-          disabled={disabled}
+          placeholder={
+            selectedProvider === "openai"
+              ? "sk-..."
+              : (t("api-key-placeholder", "Enter API Key if required") as string)
+          }
+          value={settings.customApiKey}
+          onChange={(e) => updateSettings("customApiKey", e.target.value)}
+          type="password"
+          toolTipProperties={{
+            message: t("api-key-tooltip", "API Key for the selected provider. For Hugging Face, this might be an Access Token. For Gemini, ensure your GCP project is configured or use an API key.") as string,
+            disabled: false,
+          }}
         />
+
+        {selectedProvider === "openai" && (
+          <Input
+            left={
+              <>
+                <FaMicrochip />
+                <span className="ml-2">{t("model")}</span>
+              </>
+            }
+            type="combobox"
+            value={settings.customModelName}
+            onChange={() => null}
+            setValue={(e) => updateSettings("customModelName", e)}
+            attributes={{ options: GPT_MODEL_NAMES }}
+            disabled={disabled}
+          />
+        )}
+        {selectedProvider === "huggingface" && (
+          <Input
+            left={
+              <>
+                <FaMicrochip />
+                <span className="ml-2">
+                  {t("huggingface-model", "Hugging Face Model")}
+                </span>
+              </>
+            }
+            placeholder={DEFAULT_HUGGING_FACE_MODEL}
+            value={settings.huggingFaceModelName ?? ""}
+            onChange={(e) =>
+              updateSettings("huggingFaceModelName", e.target.value)
+            }
+            toolTipProperties={{
+              message: t("huggingface-model-tooltip", "e.g., gpt2, meta-llama/Llama-2-7b-chat-hf") as string,
+              disabled: false,
+            }}
+          />
+        )}
+        {selectedProvider === "gemini" && (
+          <Input
+            left={
+              <>
+                <FaMicrochip />
+                <span className="ml-2">{t("gemini-model", "Gemini Model")}</span>
+              </>
+            }
+            placeholder={DEFAULT_GEMINI_MODEL}
+            value={settings.geminiModelName ?? ""}
+            onChange={(e) => updateSettings("geminiModelName", e.target.value)}
+            toolTipProperties={{
+              message: t("gemini-model-tooltip", "e.g., gemini-pro, gemini-1.5-pro-latest") as string,
+              disabled: false,
+            }}
+          />
+        )}
+
         {isGuestMode && (
           <Input
             left={
@@ -252,17 +411,19 @@ export const SettingsDialog: React.FC<{
           name={t("advanced-settings")}
         ></Accordion>
       </div>
-      <Trans i18nKey="api-key-notice" ns="settings">
+      <Trans i18nKey="api-key-provider-notice" ns="settings">
         <strong className="mt-10">
-          NOTE: To get a key, sign up for an OpenAI account and visit the
-          following
+          NOTE: Ensure your API key is valid for the selected provider. For
+          OpenAI, get keys
           <a
             href="https://platform.openai.com/account/api-keys"
             className="text-blue-500"
           >
-            link.
+            here
           </a>
-          This key is only used in the current browser session
+          . For Hugging Face, it may be an Access Token. For Gemini, refer to
+          Google Cloud console. This key is only used in the current browser
+          session.
         </strong>
       </Trans>
     </Dialog>

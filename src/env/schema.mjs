@@ -21,8 +21,8 @@ const stringToNumber = () => {
 
 const validateDataBaseUrl = () => {
   return isProdutionAndAuthEnabled
-    ? z.string().url()
-    : z.string().url().optional();
+    ? z.string().min(1)
+    : z.string().optional();
 };
 
 const validateNextUrl = () => {
@@ -46,7 +46,7 @@ export const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   NEXTAUTH_SECRET: requiredAuthEnabledForProduction(),
   NEXTAUTH_URL: validateNextUrl(),
-  OPENAI_API_KEY: z.string(),
+  OPENAI_API_KEY: z.string().optional(),
 
   GOOGLE_CLIENT_ID: requiredAuthEnabledForProduction(),
   GOOGLE_CLIENT_SECRET: requiredAuthEnabledForProduction(),
@@ -62,6 +62,10 @@ export const serverSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   RATE_LIMITER_REQUESTS_PER_MINUTE: stringToNumber().optional(),
+  
+  // Add Hugging Face and Gemini API keys
+  HUGGINGFACE_API_KEY: z.string().optional(),
+  GEMINI_API_KEY: z.string().optional(),
 });
 
 /**
@@ -91,6 +95,10 @@ export const serverEnv = {
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   RATE_LIMITER_REQUESTS_PER_MINUTE:
     process.env.RATE_LIMITER_REQUESTS_PER_MINUTE,
+    
+  // AI API keys
+  HUGGINGFACE_API_KEY: process.env.HUGGINGFACE_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 };
 
 /**

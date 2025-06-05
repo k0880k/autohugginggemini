@@ -152,7 +152,7 @@ const summarizeSnippets = async (
   snippets: string[]
 ) => {
   const completion = await new LLMChain({
-    llm: createModel(modelSettings),
+    llm: createModel(modelSettings) as any,
     prompt: summarizeSearchSnippets,
   }).call({
     goal,
